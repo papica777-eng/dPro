@@ -11,9 +11,18 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the Flask application files
-# This copies app.py and serviceAccountKey.json into the /app directory
 COPY app.py .
-COPY serviceAccountKey.json .
+
+# Create static directory for serving frontend files
+RUN mkdir -p /app/static
+
+# Copy frontend files to static directory
+COPY index.html ./static/
+COPY style.css ./static/
+
+# Copy serviceAccountKey.json if it exists (optional for development)
+# Note: In production, this should be mounted as a volume or provided via secrets
+COPY serviceAccountKey.jso[n] . || true
 
 # Expose port 5000, as defined in app.py
 EXPOSE 5000
