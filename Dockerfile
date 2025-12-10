@@ -11,9 +11,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the Flask application files
-# This copies app.py and serviceAccountKey.json into the /app directory
 COPY app.py .
-COPY serviceAccountKey.json .
+COPY index.html .
+COPY style.css .
+# Note: serviceAccountKey.json should NOT be in the Docker image
+# Use environment variables or mount it as a secret at runtime
 
 # Expose port 5000, as defined in app.py
 EXPOSE 5000
