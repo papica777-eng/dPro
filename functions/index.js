@@ -8,8 +8,8 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// --- ВАЖНО: СЛОЖИ ТВОЯ API КЛЮЧ ТУК ---
-const API_KEY = "ТВОЯТ_КЛЮЧ_ТУК"; 
+// --- API Key for Google Gemini AI ---
+const API_KEY = "AIzaSyD-V5YcHFaQ7oqsKFFLt8Gg-rTf3IRW24U"; 
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
