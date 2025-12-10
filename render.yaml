@@ -1,4 +1,5 @@
 services:
+  # RECOMMENDED: Native Python deployment (faster, simpler)
   - type: web
     name: dpro-qa-assistant
     env: python
@@ -10,3 +11,13 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
+  
+  # ALTERNATIVE: Docker deployment (uncomment to use, comment out Python service above)
+  # - type: web
+  #   name: dpro-qa-assistant-docker
+  #   env: docker
+  #   region: oregon
+  #   plan: free
+  #   branch: main
+  #   dockerfilePath: ./Dockerfile
+  #   dockerContext: .
