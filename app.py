@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import uuid
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -14,22 +15,25 @@ CORS(app) # Enable CORS for all routes, allowing frontend (index.html) to connec
 # Path to your service account key.json
 SERVICE_ACCOUNT_KEY_PATH = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
 
-if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
-    print(f"ERROR: serviceAccountKey.json not found at {SERVICE_ACCOUNT_KEY_PATH}")
-    print("Please download your Firebase service account key and place it in the 'backend' directory.")
-    print("You can get it from Firebase Console -> Project settings -> Service accounts -> Generate new private key.")
-    # Exit if key is missing, as Firebase init will fail anyway.
-    # In a production setup, you might use environment variables.
-    exit(1)
+# Global variables for Firebase and demo mode
+db = None
+DEMO_MODE = False
+demo_projects = []  # In-memory storage for demo mode
 
-try:
-    cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Firebase initialized successfully!")
-except Exception as e:
-    print(f"ERROR: Failed to initialize Firebase: {e}")
-    exit(1)
+if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
+    print(f"WARNING: serviceAccountKey.json not found at {SERVICE_ACCOUNT_KEY_PATH}")
+    print("Running in DEMO MODE without Firebase.")
+    DEMO_MODE = True
+else:
+    try:
+        cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("Firebase initialized successfully!")
+    except Exception as e:
+        print(f"WARNING: Failed to initialize Firebase: {e}")
+        print("Running in DEMO MODE without Firebase.")
+        DEMO_MODE = True
 
 # --- API Endpoints ---
 
@@ -99,22 +103,29 @@ def create_project():
     }
 
     try:
-        # Add project to Firestore
-        # The add() method returns a tuple: (update_time, document_reference)
-        # We need the document_reference to get the ID
-        doc_ref = db.collection('projects').add(project_data)
-        project_id = doc_ref[1].id
-        print(f"Project '{project_name}' saved to Firestore with ID: {project_id}")
-        
-        # Return the saved project data including the ID and the full report
-        project_data['id'] = project_id
-        # Convert datetime object to string for JSON serialization
-        project_data['timestamp'] = project_data['timestamp'].isoformat()
+        if DEMO_MODE:
+            # Demo mode: store in memory
+            project_id = str(uuid.uuid4())
+            project_data['id'] = project_id
+            project_data['timestamp'] = project_data['timestamp'].isoformat()
+            demo_projects.append(project_data)
+            print(f"Project '{project_name}' saved in demo mode with ID: {project_id}")
+        else:
+            # Add project to Firestore
+            # The add() method returns a tuple: (update_time, document_reference)
+            # We need the document_reference to get the ID
+            doc_ref = db.collection('projects').add(project_data)
+            project_id = doc_ref[1].id
+            print(f"Project '{project_name}' saved to Firestore with ID: {project_id}")
+            
+            # Update project data with ID and convert timestamp for JSON serialization
+            project_data['id'] = project_id
+            project_data['timestamp'] = project_data['timestamp'].isoformat()
         
         return jsonify({"message": "Project created and QA simulated successfully", "project_id": project_id, "report": project_data}), 201
     except Exception as e:
-        print(f"Error saving project to Firestore: {e}")
-        return jsonify({"error": f"Failed to save project to Firestore: {e}"}), 500
+        print(f"Error saving project: {e}")
+        return jsonify({"error": f"Failed to save project: {e}"}), 500
 
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
@@ -122,20 +133,26 @@ def get_projects():
     Retrieves all stored projects from Firestore, ordered by timestamp.
     """
     try:
-        # Get latest 15 projects, ordered by timestamp descending
-        projects_ref = db.collection('projects').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(15)
-        docs = projects_ref.stream()
-        projects = []
-        for doc in docs:
-            project_data = doc.to_dict()
-            project_data['id'] = doc.id
-            # Convert Firestore Timestamp objects to string for JSON serialization
-            if 'timestamp' in project_data and hasattr(project_data['timestamp'], 'isoformat'):
-                project_data['timestamp'] = project_data['timestamp'].isoformat()
-            projects.append(project_data)
-        return jsonify(projects), 200
+        if DEMO_MODE:
+            # Demo mode: return in-memory projects
+            # Sort by timestamp descending and limit to 15
+            sorted_projects = sorted(demo_projects, key=lambda x: x.get('timestamp', ''), reverse=True)[:15]
+            return jsonify(sorted_projects), 200
+        else:
+            # Get latest 15 projects, ordered by timestamp descending
+            projects_ref = db.collection('projects').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(15)
+            docs = projects_ref.stream()
+            projects = []
+            for doc in docs:
+                project_data = doc.to_dict()
+                project_data['id'] = doc.id
+                # Convert Firestore Timestamp objects to string for JSON serialization
+                if 'timestamp' in project_data and hasattr(project_data['timestamp'], 'isoformat'):
+                    project_data['timestamp'] = project_data['timestamp'].isoformat()
+                projects.append(project_data)
+            return jsonify(projects), 200
     except Exception as e:
-        print(f"Error retrieving projects from Firestore: {e}")
+        print(f"Error retrieving projects: {e}")
         return jsonify({"error": f"Failed to retrieve projects: {e}"}), 500
 
 if __name__ == '__main__':
