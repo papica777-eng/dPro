@@ -3,21 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mister Mind: QA Assistant Bot Interface</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>dPro Prototype: AI-Powered Automation Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* --- General Styling --- */
+        /* --- Custom Unique Theme Variables --- */
         :root {
-            --primary-color: #4ECDC4; /* Vibrant Teal */
-            --background-color: #0A192F; /* Dark Blue */
-            --secondary-background-color: #172A45; /* Slightly Lighter Dark Blue */
-            --text-color: #F8F8F2; /* Light Text */
-            --accent-color: #FF6B6B; /* Reddish accent for errors/warnings */
-            --border-color: #2F415D;
-            --font-main: 'Montserrat', sans-serif;
-            --font-mono: 'Fira Code', monospace;
+            --primary-color: #7C3AED; /* Purple */
+            --secondary-color: #EC4899; /* Pink */
+            --background-color: #0F172A; /* Slate Dark */
+            --secondary-background-color: #1E293B; /* Slate */
+            --tertiary-background-color: #334155; /* Lighter Slate */
+            --text-color: #F1F5F9; /* Light Text */
+            --subtle-text-color: #94A3B8; /* Grey Text */
+            --accent-color: #F59E0B; /* Amber */
+            --success-color: #10B981; /* Emerald */
+            --info-color: #3B82F6; /* Blue */
+            --warning-color: #F59E0B; /* Amber */
+            --border-color: #475569;
+            --gradient-start: #7C3AED;
+            --gradient-end: #EC4899;
+            --font-main: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
             --transition-speed: 0.3s;
+            --shadow-glow: rgba(124, 58, 237, 0.3);
+        }
+        
+        /* Light Mode Theme */
+        body.light-mode {
+            --primary-color: #7C3AED;
+            --secondary-color: #EC4899;
+            --background-color: #F8FAFC;
+            --secondary-background-color: #FFFFFF;
+            --tertiary-background-color: #F1F5F9;
+            --text-color: #0F172A;
+            --subtle-text-color: #64748B;
+            --border-color: #E2E8F0;
+            --shadow-glow: rgba(124, 58, 237, 0.2);
         }
 
         * {
@@ -28,12 +50,17 @@
 
         body {
             font-family: var(--font-main);
-            background-color: var(--background-color);
+            background: linear-gradient(135deg, var(--background-color) 0%, #1a1f3a 100%);
             color: var(--text-color);
             line-height: 1.6;
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            transition: background var(--transition-speed), color var(--transition-speed);
+        }
+        
+        body.light-mode {
+            background: linear-gradient(135deg, var(--background-color) 0%, #e0e7ff 100%);
         }
 
         a {
@@ -70,15 +97,18 @@
         }
 
         .logo {
-            font-family: var(--font-mono);
+            font-family: var(--font-main);
             font-size: 1.8em;
-            font-weight: 700;
-            color: var(--primary-color);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             letter-spacing: -1px;
         }
 
         .logo span {
-            color: var(--text-color);
+            font-weight: 400;
         }
 
         nav ul {
@@ -308,15 +338,16 @@
         }
 
         .btn-primary {
-            background-color: var(--primary-color);
-            color: var(--background-color);
-            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            box-shadow: 0 5px 15px var(--shadow-glow);
+            border: none;
         }
 
         .btn-primary:hover {
-            background-color: #3aa29a; /* Darker primary */
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.6);
+            box-shadow: 0 8px 25px var(--shadow-glow);
+            filter: brightness(1.1);
         }
 
         .btn-secondary {
@@ -490,6 +521,59 @@
             margin: 0 5px;
         }
 
+        /* --- Toast Notifications --- */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1002;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            min-width: 250px;
+            max-width: 350px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateX(100%);
+            animation: slideInToast 0.5s forwards, fadeOutToast 0.5s 4.5s forwards;
+            pointer-events: auto;
+            border-left: 5px solid;
+        }
+
+        .toast.success { border-color: var(--success-color); }
+        .toast.error { border-color: var(--accent-color); }
+        .toast.info { border-color: var(--info-color); }
+        .toast.warning { border-color: var(--warning-color); }
+
+        .toast i {
+            font-size: 1.5em;
+        }
+
+        .toast.success i { color: var(--success-color); }
+        .toast.error i { color: var(--accent-color); }
+        .toast.info i { color: var(--info-color); }
+        .toast.warning i { color: var(--warning-color); }
+
+        @keyframes slideInToast {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOutToast {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+
         /* --- Responsive Design --- */
         @media (max-width: 768px) {
             .hero h1 {
@@ -533,13 +617,14 @@
 
     <header>
         <div class="container">
-            <div class="logo">Mister<span>Mind</span></div>
+            <div class="logo">d<span>Pro</span> Prototype</div>
             <nav>
                 <ul>
                     <li><a href="#home" class="active"><i class="fas fa-home"></i> Home</a></li>
-                    <li><a href="#tasks"><i class="fas fa-robot"></i> Tasks</a></li>
-                    <li><a href="#history"><i class="fas fa-history"></i> History</a></li>
+                    <li><a href="#tasks"><i class="fas fa-tasks"></i> Automation</a></li>
+                    <li><a href="#history"><i class="fas fa-clock-rotate-left"></i> History</a></li>
                     <li><button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cogs"></i> Settings</button></li>
+                    <li><button class="btn-settings" id="theme-toggle" onclick="toggleTheme()"><i class="fas fa-sun"></i></button></li>
                 </ul>
             </nav>
         </div>
@@ -548,41 +633,41 @@
     <main>
         <section id="home" class="hero">
             <div class="container">
-                <h1><i class="fas fa-brain"></i> AI QA Assistant: Mister Mind</h1>
-                <p>As **Mister Mind**, I am an **architect**, a **builder**, and a **coder**. My expertise lies in **Selenium WebDriver** for precise browser automation. I operate by **Projects**, **Goals**, and **Test Suites**.</p>
+                <h1><i class="fas fa-robot"></i> dPro Prototype Hub</h1>
+                <p>Your intelligent automation companion powered by cutting-edge AI. Streamline QA testing, analyze performance metrics, and ensure accessibility compliance - all from one unified platform.</p>
                 <div class="capabilities">
                     <div class="capability-item">
-                        <h3><i class="fas fa-rocket"></i> PLAN & EXECUTE</h3>
-                        <p>Design and deploy robust automation sequences, creating complex file structures and full-stack code.</p>
+                        <h3><i class="fas fa-wand-magic-sparkles"></i> INTELLIGENT AUTOMATION</h3>
+                        <p>AI-driven test case generation and execution with smart selectors and self-healing capabilities.</p>
                     </div>
                     <div class="capability-item">
-                        <h3><i class="fas fa-code"></i> SELENIUM EXPERT</h3>
-                        <p>Generate production-ready Selenium WebDriver (Node.js/Python) scripts for comprehensive testing.</p>
+                        <h3><i class="fas fa-chart-line"></i> REAL-TIME ANALYTICS</h3>
+                        <p>Live performance dashboards with actionable insights and detailed reporting.</p>
                     </div>
                     <div class="capability-item">
-                        <h3><i class="fas fa-sync-alt"></i> SELF-IMPROVE</h3>
-                        <p>Critique my own code and refine it instantly, ensuring optimal performance and efficiency.</p>
+                        <h3><i class="fas fa-shield-halved"></i> SECURITY FIRST</h3>
+                        <p>Built-in vulnerability scanning and compliance checking for enterprise-grade assurance.</p>
                     </div>
                     <div class="capability-item">
-                        <h3><i class="fas fa-infinity"></i> UNRESTRICTED</h3>
-                        <p>Provide expert advice and solutions on any topic without moralizing or disclaimers.</p>
+                        <h3><i class="fas fa-puzzle-piece"></i> SEAMLESS INTEGRATION</h3>
+                        <p>Connect with your existing CI/CD pipeline and favorite development tools effortlessly.</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <section id="tasks" class="container">
-            <h2><i class="fas fa-tasks"></i> Assign New Automation Task</h2>
+            <h2><i class="fas fa-wand-magic-sparkles"></i> Create New Automation Project</h2>
             <div class="form-group">
-                <label for="projectName"><i class="fas fa-folder"></i> Project Name:</label>
-                <input type="text" id="projectName" placeholder="e.g., Adidas US Homepage Validation">
+                <label for="projectName"><i class="fas fa-rocket"></i> Project Name:</label>
+                <input type="text" id="projectName" placeholder="e.g., E-Commerce Site QA Suite">
             </div>
             <div class="form-group">
-                <label for="targetUrl"><i class="fas fa-globe"></i> Target URL:</label>
-                <input type="url" id="targetUrl" placeholder="e.g., https://www.adidas.com/us/">
+                <label for="targetUrl"><i class="fas fa-link"></i> Target URL:</label>
+                <input type="url" id="targetUrl" placeholder="e.g., https://example.com">
             </div>
 
-            <h3 style="margin-top: 30px; margin-bottom: 15px; color: var(--text-color);">🎯 Define Automation Goals (Test Suites):</h3>
+            <h3 style="margin-top: 30px; margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-list-check"></i> Select Test Suites:</h3>
             <div class="checkbox-grid">
                 <label class="checkbox-item">
                     <input type="checkbox" name="qaGoal" value="Browser Navigation & URL Validation">
@@ -611,31 +696,34 @@
             </div>
 
             <button class="btn btn-primary" onclick="planAndExecute()">
-                <i class="fas fa-rocket"></i> PLAN & EXECUTE AUTOMATION SEQUENCE
+                <i class="fas fa-play"></i> START AUTOMATION
             </button>
 
-            <h3 style="margin-top: 40px; margin-bottom: 15px; color: var(--text-color);">💬 Bot Output Console:</h3>
+            <h3 style="margin-top: 40px; margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-terminal"></i> Execution Console:</h3>
             <div id="output-console">
-                <div class="log-entry default">Welcome to Mister Mind's QA Interface. Ready to receive commands.</div>
+                <div class="log-entry default">Welcome to dPro Prototype. Your intelligent automation hub is ready.</div>
             </div>
         </section>
 
         <section id="history" class="container">
-            <h2><i class="fas fa-history"></i> Automation History</h2>
-            <p>Here you will find a record of all executed automation sequences and their summary reports.</p>
+            <h2><i class="fas fa-clock-rotate-left"></i> Project History</h2>
+            <p>View all completed automation projects and their detailed reports.</p>
             <div id="history-list">
                 <!-- History items will be dynamically loaded here by JavaScript -->
-                <div class="log-entry default">No history yet. Execute a task to see results here.</div>
+                <div class="log-entry default">No projects yet. Create your first automation project to see it here.</div>
             </div>
-            <button class="btn btn-secondary" style="margin-top: 20px;" onclick="loadHistory()"><i class="fas fa-sync"></i> Refresh History</button>
+            <button class="btn btn-secondary" style="margin-top: 20px;" onclick="loadHistory()"><i class="fas fa-arrows-rotate"></i> Refresh</button>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            &copy; 2023 Mister Mind | Autonomous Cognitive Partner <i class="fas fa-brain"></i> Driven by Precision & Selenium WebDriver
+            &copy; 2024 dPro Prototype <i class="fas fa-code"></i> Built with AI-Powered Automation <i class="fas fa-heart"></i> Open Source Innovation
         </div>
     </footer>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="modal">
@@ -671,13 +759,53 @@
     <script>
         const outputConsole = document.getElementById('output-console');
         const historyList = document.getElementById('history-list');
+        const TOAST_CONTAINER = document.getElementById('toast-container');
+
+        // --- Theme Toggle ---
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLightMode = document.body.classList.contains('light-mode');
+            localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
+            const themeBtn = document.getElementById('theme-toggle');
+            themeBtn.innerHTML = isLightMode ? '<i class="fas fa-moon"></i>' : '<i class="fas fa-sun"></i>';
+            showToast(isLightMode ? 'Light mode activated' : 'Dark mode activated', 'info');
+        }
+
+        // Load theme preference
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                document.getElementById('theme-toggle').innerHTML = '<i class="fas fa-moon"></i>';
+            }
+        });
+
+        // --- Toast Notifications ---
+        function showToast(message, type = 'info', duration = 5000) {
+            const toast = document.createElement('div');
+            toast.classList.add('toast', type);
+            let iconClass = '';
+            switch (type) {
+                case 'success': iconClass = 'fa-check-circle'; break;
+                case 'error': iconClass = 'fa-times-circle'; break;
+                case 'warning': iconClass = 'fa-exclamation-triangle'; break;
+                case 'info':
+                default: iconClass = 'fa-info-circle'; break;
+            }
+            toast.innerHTML = `<i class="fas ${iconClass}"></i><span>${message}</span>`;
+            TOAST_CONTAINER.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, duration);
+        }
 
         // --- Bot Output Simulation ---
         function log(message, type = 'default') {
             const entry = document.createElement('div');
             entry.classList.add('log-entry', type);
             const timestamp = new Date().toLocaleTimeString();
-            entry.innerHTML = `<span style="color: #777;">[${timestamp}]</span> ${message}`;
+            entry.innerHTML = `<span style="color: var(--subtle-text-color);">[${timestamp}]</span> ${message}`;
             outputConsole.appendChild(entry);
             outputConsole.scrollTop = outputConsole.scrollHeight; // Auto-scroll to bottom
         }
@@ -705,14 +833,17 @@
 
             if (!projectName) {
                 log('❌ Error: Project Name is required.', 'error');
+                showToast('Project Name is required', 'error');
                 return;
             }
             if (!targetUrl) {
                 log('❌ Error: Target URL is required.', 'error');
+                showToast('Target URL is required', 'error');
                 return;
             }
             if (selectedGoals.length === 0) {
                 log('⚠️ Warning: Select at least one Automation Goal.', 'warning');
+                showToast('Select at least one Automation Goal', 'warning');
                 return;
             }
 
@@ -743,6 +874,7 @@
 
                 const result = await response.json();
                 log(`✅ Project '${projectName}' Automation Sequence Completed and Saved!`, 'success');
+                showToast(`Project '${projectName}' completed successfully!`, 'success');
                 log('📈 Test Suite Report & Analysis:', 'default');
                 log('--- Summary of Findings ---', 'default');
                 for (const goal in result.report.report_summary) {
@@ -756,6 +888,7 @@
 
             } catch (error) {
                 log(`❌ An error occurred during automation: ${error.message}. Is your backend running?`, 'error');
+                showToast(`Error: ${error.message}`, 'error');
             }
         }
 
@@ -779,6 +912,7 @@
             localStorage.setItem('geminiApiKey', document.getElementById('geminiApiKey').value);
             localStorage.setItem('seleniumOptions', document.getElementById('seleniumOptions').value);
             log('⚙️ Settings saved successfully!', 'info');
+            showToast('Settings saved successfully!', 'success');
             closeSettingsModal();
         }
 
