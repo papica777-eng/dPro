@@ -622,6 +622,7 @@
                 <ul>
                     <li><a href="#home" class="active"><i class="fas fa-home"></i> Home</a></li>
                     <li><a href="#tasks"><i class="fas fa-tasks"></i> Automation</a></li>
+                    <li><a href="#test-cases"><i class="fas fa-clipboard-list"></i> Test Cases</a></li>
                     <li><a href="#history"><i class="fas fa-clock-rotate-left"></i> History</a></li>
                     <li><button class="btn-settings" onclick="openSettingsModal()"><i class="fas fa-cogs"></i> Settings</button></li>
                     <li><button class="btn-settings" id="theme-toggle" onclick="toggleTheme()"><i class="fas fa-sun"></i></button></li>
@@ -667,7 +668,19 @@
                 <input type="url" id="targetUrl" placeholder="e.g., https://example.com">
             </div>
 
-            <h3 style="margin-top: 30px; margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-list-check"></i> Select Test Suites:</h3>
+            <h3 style="margin-top: 30px; margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-vial"></i> QA Testing Strategy:</h3>
+            
+            <div class="form-group">
+                <label for="testingMode"><i class="fas fa-sliders"></i> Testing Mode:</label>
+                <select id="testingMode" style="width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); background-color: var(--input-bg-color); color: var(--text-color); border-radius: 8px; font-size: 1em; font-family: var(--font-mono);">
+                    <option value="automated">Fully Automated Testing</option>
+                    <option value="manual-checklist">Manual Testing Checklist</option>
+                    <option value="hybrid">Hybrid (Manual + Automated)</option>
+                    <option value="exploratory">Exploratory Testing</option>
+                </select>
+            </div>
+
+            <h3 style="margin-top: 20px; margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-list-check"></i> Select Test Suites:</h3>
             <div class="checkbox-grid">
                 <label class="checkbox-item">
                     <input type="checkbox" name="qaGoal" value="Browser Navigation & URL Validation">
@@ -693,6 +706,39 @@
                     <input type="checkbox" name="qaGoal" value="Screenshot & Visual Regression">
                     <i class="fas fa-camera"></i><span>Screenshot & Visual Regression</span>
                 </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" name="qaGoal" value="Security Testing & Vulnerability Scan">
+                    <i class="fas fa-shield-halved"></i><span>Security Testing & Vulnerability Scan</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" name="qaGoal" value="API Testing & Integration">
+                    <i class="fas fa-plug"></i><span>API Testing & Integration</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" name="qaGoal" value="Cross-Browser Compatibility">
+                    <i class="fas fa-browser"></i><span>Cross-Browser Compatibility</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" name="qaGoal" value="Mobile Responsiveness">
+                    <i class="fas fa-mobile-alt"></i><span>Mobile Responsiveness</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" name="qaGoal" value="Bug Detection & Reporting">
+                    <i class="fas fa-bug"></i><span>Bug Detection & Reporting</span>
+                </label>
+                <label class="checkbox-item">
+                    <input type="checkbox" name="qaGoal" value="Test Case Generation">
+                    <i class="fas fa-file-lines"></i><span>Test Case Generation</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="planAndExecute()" style="flex: 1;">
+                    <i class="fas fa-play"></i> START AUTOMATION
+                </button>
+                <button class="btn btn-secondary" onclick="generateTestCases()" style="flex: 1;">
+                    <i class="fas fa-file-contract"></i> GENERATE TEST CASES
+                </button>
             </div>
 
             <button class="btn btn-primary" onclick="planAndExecute()">
@@ -702,6 +748,55 @@
             <h3 style="margin-top: 40px; margin-bottom: 15px; color: var(--text-color);"><i class="fas fa-terminal"></i> Execution Console:</h3>
             <div id="output-console">
                 <div class="log-entry default">Welcome to dPro Prototype. Your intelligent automation hub is ready.</div>
+            </div>
+        </section>
+
+        <section id="test-cases" class="container" style="display: none;">
+            <h2><i class="fas fa-clipboard-list"></i> Test Case Management</h2>
+            <p>Professional test case templates and bug tracking system.</p>
+            
+            <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                <div style="flex: 1; background-color: var(--tertiary-background-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h3 style="color: var(--primary-color); margin-bottom: 15px;"><i class="fas fa-vial-circle-check"></i> Test Case Templates</h3>
+                    <button class="btn btn-secondary" onclick="generateTestCaseTemplate('functional')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-clipboard-check"></i> Functional Test Cases
+                    </button>
+                    <button class="btn btn-secondary" onclick="generateTestCaseTemplate('regression')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-rotate-left"></i> Regression Test Cases
+                    </button>
+                    <button class="btn btn-secondary" onclick="generateTestCaseTemplate('smoke')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-fire-flame-simple"></i> Smoke Test Cases
+                    </button>
+                    <button class="btn btn-secondary" onclick="generateTestCaseTemplate('integration')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-link"></i> Integration Test Cases
+                    </button>
+                </div>
+                
+                <div style="flex: 1; background-color: var(--tertiary-background-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h3 style="color: var(--accent-color); margin-bottom: 15px;"><i class="fas fa-bug"></i> Bug Detection Tools</h3>
+                    <button class="btn btn-secondary" onclick="runBugDetection('ui')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-desktop"></i> UI/UX Bug Finder
+                    </button>
+                    <button class="btn btn-secondary" onclick="runBugDetection('functional')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-gears"></i> Functional Bug Scanner
+                    </button>
+                    <button class="btn btn-secondary" onclick="runBugDetection('security')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-shield-virus"></i> Security Vulnerability Scan
+                    </button>
+                    <button class="btn btn-secondary" onclick="runBugDetection('performance')" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-gauge-high"></i> Performance Issues
+                    </button>
+                </div>
+            </div>
+
+            <div id="test-case-output" style="background-color: var(--secondary-background-color); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); min-height: 300px;">
+                <h3 style="color: var(--text-color); margin-bottom: 15px;"><i class="fas fa-file-export"></i> Generated Test Cases & Bug Reports</h3>
+                <div id="test-case-content" style="font-family: var(--font-mono); font-size: 0.9em; white-space: pre-wrap; color: var(--subtle-text-color);">
+                    Select a template or run bug detection to generate professional test documentation.
+                </div>
+                <button class="btn btn-primary" onclick="exportTestCases()" style="margin-top: 20px;">
+                    <i class="fas fa-download"></i> Export as Document
+                </button>
             </div>
         </section>
 
@@ -810,10 +905,24 @@
             outputConsole.scrollTop = outputConsole.scrollHeight; // Auto-scroll to bottom
         }
 
-        // --- Navigation Active State ---
+        // --- Navigation Active State and Page Switching ---
         document.querySelectorAll('nav a').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
-                // e.preventDefault(); // Prevent default anchor jump for smooth scrolling or SPA-like behavior
+                e.preventDefault();
+                const targetSection = this.getAttribute('href').substring(1);
+                
+                // Hide all sections
+                document.querySelectorAll('main > section').forEach(section => {
+                    section.style.display = 'none';
+                });
+                
+                // Show target section
+                const target = document.getElementById(targetSection);
+                if (target) {
+                    target.style.display = 'block';
+                }
+                
+                // Update active state
                 document.querySelectorAll('nav a').forEach(item => item.classList.remove('active'));
                 this.classList.add('active');
             });
@@ -822,6 +931,12 @@
         // Ensure "Home" is active on load
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelector('nav a[href="#home"]').classList.add('active');
+            // Show only home section initially
+            document.querySelectorAll('main > section').forEach(section => {
+                if (section.id !== 'home') {
+                    section.style.display = 'none';
+                }
+            });
         });
 
 
@@ -1003,6 +1118,614 @@
                 backendUrlInput.value = localStorage.getItem('backendUrl') || "http://localhost:5000/api";
             }
         });
+
+        // --- QA Professional Functions ---
+        
+        // Generate Test Cases
+        function generateTestCases() {
+            const projectName = document.getElementById('projectName').value;
+            const targetUrl = document.getElementById('targetUrl').value;
+            const testingMode = document.getElementById('testingMode').value;
+            
+            if (!projectName || !targetUrl) {
+                showToast('Please fill in Project Name and Target URL first', 'warning');
+                return;
+            }
+            
+            log('🧪 Generating comprehensive test cases...', 'info');
+            showToast('Generating test cases...', 'info');
+            
+            // Switch to test cases section
+            document.querySelectorAll('main > section').forEach(section => section.style.display = 'none');
+            document.getElementById('test-cases').style.display = 'block';
+            document.querySelectorAll('nav a').forEach(item => item.classList.remove('active'));
+            document.querySelector('nav a[href="#test-cases"]').classList.add('active');
+            
+            // Generate sample test cases
+            const testCaseOutput = document.getElementById('test-case-content');
+            testCaseOutput.innerHTML = `
+<strong>PROJECT: ${projectName}</strong>
+<strong>TARGET URL: ${targetUrl}</strong>
+<strong>TESTING MODE: ${testingMode.toUpperCase()}</strong>
+<strong>GENERATED: ${new Date().toLocaleString()}</strong>
+
+═══════════════════════════════════════════════════════════════
+TEST CASE SUITE: AUTOMATED WEB APPLICATION TESTING
+═══════════════════════════════════════════════════════════════
+
+TC-001: Login Functionality Test
+Priority: HIGH | Type: Functional | Mode: ${testingMode}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Preconditions: User should be on login page
+Steps:
+  1. Navigate to ${targetUrl}/login
+  2. Enter valid username
+  3. Enter valid password
+  4. Click login button
+Expected Result: User successfully logged in and redirected to dashboard
+Test Data: username: test@example.com, password: Test@123
+
+TC-002: Form Validation Test
+Priority: MEDIUM | Type: Functional | Mode: ${testingMode}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Preconditions: User should be on registration page
+Steps:
+  1. Leave all fields empty
+  2. Click submit button
+  3. Verify error messages appear
+  4. Enter invalid email format
+  5. Verify email validation error
+Expected Result: Appropriate validation errors displayed
+
+TC-003: Page Load Performance Test
+Priority: HIGH | Type: Performance | Mode: ${testingMode}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Steps:
+  1. Navigate to ${targetUrl}
+  2. Measure page load time
+  3. Check if load time < 3 seconds
+Expected Result: Page loads within acceptable time frame
+
+TC-004: Responsive Design Test
+Priority: MEDIUM | Type: UI/UX | Mode: ${testingMode}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Steps:
+  1. Open site on desktop (1920x1080)
+  2. Open site on tablet (768x1024)
+  3. Open site on mobile (375x667)
+  4. Verify layout adapts correctly
+Expected Result: Site is fully responsive across all devices
+
+TC-005: Security Headers Check
+Priority: HIGH | Type: Security | Mode: ${testingMode}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Steps:
+  1. Send HTTP request to ${targetUrl}
+  2. Check for security headers (CSP, X-Frame-Options, etc.)
+  3. Verify HTTPS is enforced
+Expected Result: All security headers present and configured
+
+TC-006: Cross-Browser Compatibility
+Priority: MEDIUM | Type: Compatibility | Mode: ${testingMode}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Steps:
+  1. Test on Chrome (latest)
+  2. Test on Firefox (latest)
+  3. Test on Safari (latest)
+  4. Test on Edge (latest)
+Expected Result: Site works consistently across all browsers
+
+═══════════════════════════════════════════════════════════════
+MANUAL TESTING CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+☐ Verify all links are working
+☐ Check for broken images
+☐ Test all form submissions
+☐ Verify error handling
+☐ Check browser console for errors
+☐ Test user navigation flow
+☐ Verify data validation
+☐ Check accessibility features
+☐ Test with screen reader
+☐ Verify GDPR/Privacy compliance
+
+═══════════════════════════════════════════════════════════════
+Total Test Cases Generated: 6
+Estimated Execution Time: 45 minutes (automated)
+Coverage: Functional, Performance, Security, UI/UX
+═══════════════════════════════════════════════════════════════
+            `;
+            
+            log('✅ Test cases generated successfully!', 'success');
+            showToast('Test cases generated successfully!', 'success');
+        }
+
+        // Generate Test Case Templates
+        function generateTestCaseTemplate(type) {
+            const projectName = document.getElementById('projectName')?.value || 'Sample Project';
+            const targetUrl = document.getElementById('targetUrl')?.value || 'https://example.com';
+            const testCaseOutput = document.getElementById('test-case-content');
+            
+            let content = '';
+            
+            switch(type) {
+                case 'functional':
+                    content = `
+<strong>FUNCTIONAL TEST CASE TEMPLATE</strong>
+<strong>Project: ${projectName}</strong>
+<strong>Date: ${new Date().toLocaleDateString()}</strong>
+
+═══════════════════════════════════════════════════════════════
+
+TC-FUNC-001: User Login Functionality
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Priority: Critical
+Module: Authentication
+Preconditions: User must have valid credentials
+Steps:
+  1. Navigate to login page
+  2. Enter username: testuser@example.com
+  3. Enter password: SecurePass123!
+  4. Click "Login" button
+Expected Result: 
+  - User successfully authenticated
+  - Redirected to dashboard
+  - Session token stored
+Actual Result: [To be filled after execution]
+Status: [PASS/FAIL]
+Defects: [Link to bug if failed]
+
+TC-FUNC-002: Add Item to Cart
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Priority: High
+Module: Shopping Cart
+Steps:
+  1. Browse product catalog
+  2. Select a product
+  3. Click "Add to Cart"
+  4. Verify cart icon updates
+Expected Result: Product added, cart count increases
+Actual Result: [To be filled]
+Status: [PASS/FAIL]
+
+TC-FUNC-003: Form Validation
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Priority: High
+Module: User Registration
+Steps:
+  1. Leave required fields empty
+  2. Attempt form submission
+  3. Verify validation messages
+Expected Result: Error messages displayed appropriately
+                    `;
+                    break;
+                    
+                case 'regression':
+                    content = `
+<strong>REGRESSION TEST CASE TEMPLATE</strong>
+<strong>Project: ${projectName}</strong>
+<strong>Build Version: ${new Date().toISOString().split('T')[0]}</strong>
+
+═══════════════════════════════════════════════════════════════
+
+Purpose: Verify existing functionality after code changes
+
+TC-REG-001: Critical Path Regression
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Area: Core User Journey
+Test Scenario: Complete user flow from registration to checkout
+Steps:
+  1. Register new user
+  2. Login with credentials
+  3. Browse products
+  4. Add items to cart
+  5. Complete checkout
+Expected: All steps complete without errors
+Previous Result: PASS
+Current Result: [To be filled]
+Status: [PASS/FAIL/BLOCKED]
+
+TC-REG-002: Database Operations
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Area: Data Persistence
+Test: CRUD operations on all entities
+Status: [PASS/FAIL]
+
+TC-REG-003: API Endpoints
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Area: Backend Services
+Test: All API responses return correct status codes
+Status: [PASS/FAIL]
+                    `;
+                    break;
+                    
+                case 'smoke':
+                    content = `
+<strong>SMOKE TEST CASE TEMPLATE</strong>
+<strong>Project: ${projectName}</strong>
+<strong>Environment: ${targetUrl}</strong>
+
+═══════════════════════════════════════════════════════════════
+
+Purpose: Quick validation of critical functionality
+
+TC-SMOKE-001: Application Launch
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Application starts without errors
+✓ Homepage loads successfully
+✓ No console errors
+✓ All critical assets load
+Execution Time: < 1 minute
+Status: [PASS/FAIL]
+
+TC-SMOKE-002: Authentication
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Login page accessible
+✓ User can login
+✓ Logout works
+Status: [PASS/FAIL]
+
+TC-SMOKE-003: Core Functionality
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Main features accessible
+✓ Navigation works
+✓ No critical errors
+Status: [PASS/FAIL]
+
+SMOKE TEST SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Tests: 3
+Execution Time: ~3 minutes
+Build Status: [PASS/FAIL]
+                    `;
+                    break;
+                    
+                case 'integration':
+                    content = `
+<strong>INTEGRATION TEST CASE TEMPLATE</strong>
+<strong>Project: ${projectName}</strong>
+
+═══════════════════════════════════════════════════════════════
+
+TC-INT-001: Frontend-Backend Integration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Test: API calls from UI work correctly
+Steps:
+  1. Trigger API call from frontend
+  2. Verify request format
+  3. Check response handling
+  4. Confirm UI updates
+Expected: Seamless data flow
+Status: [PASS/FAIL]
+
+TC-INT-002: Third-Party Integration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Test: Payment gateway integration
+Steps:
+  1. Initiate payment flow
+  2. Verify external service call
+  3. Handle callbacks
+  4. Update order status
+Expected: Successful transaction processing
+Status: [PASS/FAIL]
+
+TC-INT-003: Database Integration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Test: Data persistence across modules
+Expected: Data consistency maintained
+Status: [PASS/FAIL]
+                    `;
+                    break;
+            }
+            
+            testCaseOutput.innerHTML = content;
+            showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} test cases generated`, 'success');
+        }
+
+        // Run Bug Detection
+        function runBugDetection(type) {
+            const testCaseOutput = document.getElementById('test-case-content');
+            showToast(`Running ${type} bug detection...`, 'info');
+            
+            let content = '';
+            const timestamp = new Date().toLocaleString();
+            
+            switch(type) {
+                case 'ui':
+                    content = `
+<strong>UI/UX BUG DETECTION REPORT</strong>
+<strong>Scan Date: ${timestamp}</strong>
+
+═══════════════════════════════════════════════════════════════
+AUTOMATED UI BUG SCAN RESULTS
+═══════════════════════════════════════════════════════════════
+
+🔴 CRITICAL ISSUES (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUG-001: Button Overlapping on Mobile
+Severity: Critical | Priority: P1
+Location: Homepage > Hero Section
+Description: CTA button overlaps with text on screens < 375px
+Steps to Reproduce:
+  1. Open site on iPhone SE
+  2. Navigate to homepage
+  3. Observe button overlap
+Impact: Poor user experience, potential loss of conversions
+Recommendation: Add responsive breakpoint for small devices
+
+BUG-002: Color Contrast Issue
+Severity: Critical | Priority: P1
+Location: Login Form > Error Messages
+Description: Red error text fails WCAG AA contrast ratio (2.8:1)
+WCAG Requirement: Minimum 4.5:1 for normal text
+Recommendation: Use #DC2626 instead of current color
+
+🟡 MEDIUM ISSUES (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUG-003: Inconsistent Font Sizes
+Severity: Medium | Priority: P2
+Description: Headers use different font sizes across pages
+Recommendation: Create unified typography system
+
+BUG-004: Missing Hover States
+Severity: Medium | Priority: P2
+Location: Navigation Links
+Recommendation: Add hover effects for better UX
+
+BUG-005: Image Aspect Ratio Distortion
+Severity: Medium | Priority: P2
+Location: Product Gallery
+Recommendation: Use object-fit: cover
+
+🟢 LOW ISSUES (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUG-006: Minor Alignment Issue in Footer
+BUG-007: Tooltip Text Truncated on Mobile
+
+═══════════════════════════════════════════════════════════════
+SUMMARY
+Critical: 2 | Medium: 3 | Low: 2
+Total Bugs Found: 7
+Recommended Priority: Fix critical issues immediately
+═══════════════════════════════════════════════════════════════
+                    `;
+                    break;
+                    
+                case 'functional':
+                    content = `
+<strong>FUNCTIONAL BUG DETECTION REPORT</strong>
+<strong>Scan Date: ${timestamp}</strong>
+
+═══════════════════════════════════════════════════════════════
+AUTOMATED FUNCTIONAL TESTING RESULTS
+═══════════════════════════════════════════════════════════════
+
+🔴 CRITICAL BUGS (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUG-F001: Login Session Expires Prematurely
+Severity: Critical | Priority: P0
+Module: Authentication
+Description: User session expires after 5 minutes instead of 30
+Expected: 30-minute session timeout
+Actual: 5-minute timeout
+Impact: Users constantly logged out, poor UX
+Root Cause: Incorrect JWT expiration config
+Fix: Update token expiration to 1800 seconds
+
+BUG-F002: Form Submission Allows Duplicate Entries
+Severity: Critical | Priority: P0
+Module: User Registration
+Description: Double-clicking submit creates duplicate accounts
+Steps to Reproduce:
+  1. Fill registration form
+  2. Double-click submit button quickly
+  3. Check database - two identical records created
+Fix: Add debounce or disable button after first click
+
+BUG-F003: Cart Total Calculation Error
+Severity: Critical | Priority: P0
+Module: Shopping Cart
+Description: Tax calculation incorrect for international orders
+Expected: Correct tax based on shipping location
+Actual: Applies default tax rate to all orders
+Impact: Revenue loss, customer complaints
+
+🟡 MEDIUM BUGS (4)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUG-F004: Search Returns No Results for Valid Queries
+BUG-F005: Email Notifications Not Sent for Password Reset
+BUG-F006: Date Picker Allows Past Dates for Future Events
+BUG-F007: File Upload Accepts Unsupported Formats
+
+🟢 LOW BUGS (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BUG-F008: Loading Spinner Doesn't Show for Slow API Calls
+BUG-F009: Success Message Stays on Screen Too Long
+
+═══════════════════════════════════════════════════════════════
+SUMMARY
+Total: 9 bugs | Critical: 3 | Medium: 4 | Low: 2
+Blocker Issues: 3 (must fix before production)
+Pass Rate: 67% (20/30 test cases passed)
+═══════════════════════════════════════════════════════════════
+                    `;
+                    break;
+                    
+                case 'security':
+                    content = `
+<strong>SECURITY VULNERABILITY SCAN REPORT</strong>
+<strong>Scan Date: ${timestamp}</strong>
+
+═══════════════════════════════════════════════════════════════
+OWASP TOP 10 SECURITY ASSESSMENT
+═══════════════════════════════════════════════════════════════
+
+🔴 HIGH SEVERITY (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SEC-001: SQL Injection Vulnerability
+OWASP: A03:2021 - Injection
+Severity: Critical | CVSS: 9.8
+Location: /api/search endpoint
+Description: User input not sanitized before SQL query
+Exploit: ' OR '1'='1' -- bypasses authentication
+Fix: Use parameterized queries or ORM
+Status: VULNERABLE ⚠️
+
+SEC-002: Cross-Site Scripting (XSS)
+OWASP: A03:2021 - Injection
+Severity: High | CVSS: 7.3
+Location: Comment section
+Description: User-generated content not escaped
+Exploit: <script>alert('XSS')</script>
+Fix: Implement input sanitization and CSP headers
+Status: VULNERABLE ⚠️
+
+🟡 MEDIUM SEVERITY (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SEC-003: Missing Security Headers
+Severity: Medium
+Headers Missing:
+  • X-Content-Type-Options
+  • X-Frame-Options
+  • Strict-Transport-Security
+Fix: Add security headers via middleware
+Status: PARTIALLY PROTECTED
+
+SEC-004: Weak Password Policy
+Severity: Medium
+Description: Passwords allow < 8 characters, no complexity requirement
+Fix: Enforce 12+ chars, upper, lower, number, special char
+Status: WEAK POLICY
+
+SEC-005: Session Fixation Vulnerability
+Severity: Medium
+Description: Session ID not regenerated after login
+Fix: Generate new session ID on authentication
+Status: VULNERABLE ⚠️
+
+🟢 LOW SEVERITY (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SEC-006: Information Disclosure in Error Messages
+SEC-007: Cookie Without HttpOnly Flag
+
+═══════════════════════════════════════════════════════════════
+PENETRATION TESTING RESULTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tests Performed: 25
+Passed: 18
+Failed: 7
+Security Score: 72/100 (NEEDS IMPROVEMENT)
+
+IMMEDIATE ACTIONS REQUIRED:
+1. Fix SQL Injection (SEC-001) - URGENT
+2. Patch XSS vulnerability (SEC-002) - URGENT
+3. Implement security headers (SEC-003)
+4. Update password policy (SEC-004)
+5. Schedule security audit after fixes
+
+═══════════════════════════════════════════════════════════════
+                    `;
+                    break;
+                    
+                case 'performance':
+                    content = `
+<strong>PERFORMANCE ANALYSIS REPORT</strong>
+<strong>Scan Date: ${timestamp}</strong>
+
+═══════════════════════════════════════════════════════════════
+WEB VITALS & PERFORMANCE METRICS
+═══════════════════════════════════════════════════════════════
+
+🔴 FAILED METRICS (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERF-001: Largest Contentful Paint (LCP)
+Current: 4.8s | Target: < 2.5s | Status: ❌ POOR
+Issue: Large hero image (2.3MB) blocks render
+Fix: 
+  • Compress and optimize images
+  • Use WebP format
+  • Implement lazy loading
+  • Add CDN
+
+PERF-002: Total Blocking Time (TBT)
+Current: 890ms | Target: < 200ms | Status: ❌ POOR
+Issue: Heavy JavaScript execution
+Fix:
+  • Code splitting
+  • Remove unused libraries
+  • Defer non-critical JS
+  • Minimize third-party scripts
+
+PERF-003: Cumulative Layout Shift (CLS)
+Current: 0.35 | Target: < 0.1 | Status: ❌ POOR
+Issue: Dynamic content insertion causes layout shifts
+Fix:
+  • Reserve space for ads/dynamic content
+  • Set image dimensions
+  • Use CSS aspect-ratio
+
+🟡 NEEDS IMPROVEMENT (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERF-004: First Contentful Paint (FCP)
+Current: 2.1s | Target: < 1.8s | Status: ⚠️ NEEDS IMPROVEMENT
+
+PERF-005: Time to Interactive (TTI)
+Current: 5.6s | Target: < 3.8s | Status: ⚠️ NEEDS IMPROVEMENT
+
+🟢 PASSED METRICS (2)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERF-006: Server Response Time (TTFB): 180ms ✓
+PERF-007: Speed Index: 2.8s ✓
+
+═══════════════════════════════════════════════════════════════
+LIGHTHOUSE SCORE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Performance:    52/100 🔴
+Accessibility:  87/100 🟢
+Best Practices: 79/100 🟡
+SEO:            91/100 🟢
+
+NETWORK ANALYSIS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Page Size: 4.2 MB (Target: < 2 MB)
+Total Requests: 87 (Target: < 50)
+JavaScript Size: 1.8 MB (Too large!)
+CSS Size: 280 KB
+Images: 2.1 MB (Needs optimization)
+
+RECOMMENDATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Priority 1: Optimize images (potential 45% size reduction)
+Priority 2: Remove unused JavaScript (1.2 MB removable)
+Priority 3: Enable text compression (gzip/brotli)
+Priority 4: Implement browser caching
+Priority 5: Use HTTP/2 or HTTP/3
+
+Estimated Load Time Improvement: 2.8s → 1.4s (50% faster!)
+═══════════════════════════════════════════════════════════════
+                    `;
+                    break;
+            }
+            
+            testCaseOutput.innerHTML = content;
+            showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} bug scan complete`, 'success');
+        }
+
+        // Export Test Cases
+        function exportTestCases() {
+            const content = document.getElementById('test-case-content').innerText;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `QA-TestCases-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Test cases exported successfully!', 'success');
+        }
 
     </script>
 </body>
