@@ -20,9 +20,8 @@ RUN mkdir -p /app/static
 COPY index.html ./static/
 COPY style.css ./static/
 
-# Copy serviceAccountKey.json if it exists (optional for development)
-# Note: In production, this should be mounted as a volume or provided via secrets
-COPY serviceAccountKey.jso[n] . || true
+# Note: serviceAccountKey.json should be provided at runtime via volume mount
+# or built into the image during CI/CD. If not present, app runs in DEMO mode.
 
 # Expose port 5000, as defined in app.py
 EXPOSE 5000

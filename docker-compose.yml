@@ -8,14 +8,11 @@ services:
     volumes:
       # Mount the serviceAccountKey.json if it exists
       - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
-      # Mount static files for development
-      - ./index.html:/app/static/index.html:ro
-      - ./style.css:/app/static/style.css:ro
     environment:
       - FLASK_ENV=production
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/projects"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/projects')"]
       interval: 30s
       timeout: 10s
       retries: 3

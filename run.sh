@@ -36,7 +36,9 @@ pip install -q -r requirements.txt
 echo "Setting up static files..."
 mkdir -p static
 cp -f index.html static/
-cp -f style.css static/ 2>/dev/null || echo "  (style.css copied)"
+if [ -f "style.css" ]; then
+    cp -f style.css static/
+fi
 
 # Check for serviceAccountKey.json
 if [ ! -f "serviceAccountKey.json" ]; then
