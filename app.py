@@ -7,7 +7,7 @@ from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app) # Enable CORS for all routes, allowing frontend (index.html) to connect
 
 # --- Firebase Initialization ---
@@ -15,23 +15,27 @@ CORS(app) # Enable CORS for all routes, allowing frontend (index.html) to connec
 SERVICE_ACCOUNT_KEY_PATH = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
 
 if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
-    print(f"ERROR: serviceAccountKey.json not found at {SERVICE_ACCOUNT_KEY_PATH}")
-    print("Please download your Firebase service account key and place it in the 'backend' directory.")
+    print(f"WARNING: serviceAccountKey.json not found at {SERVICE_ACCOUNT_KEY_PATH}")
+    print("Please download your Firebase service account key and place it in the root directory.")
     print("You can get it from Firebase Console -> Project settings -> Service accounts -> Generate new private key.")
-    # Exit if key is missing, as Firebase init will fail anyway.
-    # In a production setup, you might use environment variables.
-    exit(1)
-
-try:
-    cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Firebase initialized successfully!")
-except Exception as e:
-    print(f"ERROR: Failed to initialize Firebase: {e}")
-    exit(1)
+    print("The application will start in DEMO mode without Firebase functionality.")
+    db = None  # Set db to None to indicate Firebase is not available
+else:
+    try:
+        cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        print("Firebase initialized successfully!")
+    except Exception as e:
+        print(f"ERROR: Failed to initialize Firebase: {e}")
+        db = None
 
 # --- API Endpoints ---
+
+@app.route('/')
+def index():
+    """Serve the main HTML interface"""
+    return app.send_static_file('index.html')
 
 @app.route('/api/project', methods=['POST'])
 def create_project():
@@ -102,6 +106,14 @@ def create_project():
         # Add project to Firestore
         # The add() method returns a tuple: (update_time, document_reference)
         # We need the document_reference to get the ID
+        if db is None:
+            # DEMO mode: Firebase not available, return mock response
+            project_id = f"demo_{int(datetime.now().timestamp())}"
+            print(f"[DEMO MODE] Project '{project_name}' simulated with ID: {project_id}")
+            project_data['id'] = project_id
+            project_data['timestamp'] = project_data['timestamp'].isoformat()
+            return jsonify({"message": "Project created and QA simulated successfully (DEMO MODE - Firebase not connected)", "project_id": project_id, "report": project_data}), 201
+        
         doc_ref = db.collection('projects').add(project_data)
         project_id = doc_ref[1].id
         print(f"Project '{project_name}' saved to Firestore with ID: {project_id}")
@@ -122,6 +134,11 @@ def get_projects():
     Retrieves all stored projects from Firestore, ordered by timestamp.
     """
     try:
+        if db is None:
+            # DEMO mode: Return empty list or sample data
+            print("[DEMO MODE] Returning empty projects list - Firebase not connected")
+            return jsonify([]), 200
+            
         # Get latest 15 projects, ordered by timestamp descending
         projects_ref = db.collection('projects').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(15)
         docs = projects_ref.stream()

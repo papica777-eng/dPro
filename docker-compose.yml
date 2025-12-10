@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount the serviceAccountKey.json if it exists
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    environment:
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/projects')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
