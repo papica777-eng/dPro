@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import uuid
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -104,7 +105,6 @@ def create_project():
     try:
         if DEMO_MODE:
             # Demo mode: store in memory
-            import uuid
             project_id = str(uuid.uuid4())
             project_data['id'] = project_id
             project_data['timestamp'] = project_data['timestamp'].isoformat()
@@ -118,9 +118,8 @@ def create_project():
             project_id = doc_ref[1].id
             print(f"Project '{project_name}' saved to Firestore with ID: {project_id}")
             
-            # Return the saved project data including the ID and the full report
+            # Update project data with ID and convert timestamp for JSON serialization
             project_data['id'] = project_id
-            # Convert datetime object to string for JSON serialization
             project_data['timestamp'] = project_data['timestamp'].isoformat()
         
         return jsonify({"message": "Project created and QA simulated successfully", "project_id": project_id, "report": project_data}), 201
