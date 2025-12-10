@@ -18,7 +18,18 @@ An AI-powered Quality Assurance assistant bot interface with Selenium WebDriver 
 
 ## Quick Start
 
-### Using the Run Script (Recommended)
+### Using Make (Recommended if you have make installed)
+
+```bash
+make run
+```
+
+Or see all available commands:
+```bash
+make help
+```
+
+### Using the Run Script
 
 ```bash
 ./run.sh
@@ -27,6 +38,7 @@ An AI-powered Quality Assurance assistant bot interface with Selenium WebDriver 
 This will:
 - Create a virtual environment
 - Install all dependencies
+- Set up static files
 - Start the application at `http://localhost:5000`
 
 ### Using Docker
@@ -42,6 +54,11 @@ Then open `http://localhost:5000` in your browser.
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+# Set up static files
+mkdir -p static
+cp index.html static/
+cp style.css static/
 
 # Run the application
 python app.py

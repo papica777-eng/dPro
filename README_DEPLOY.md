@@ -134,6 +134,16 @@ If port 5000 is already in use, either:
 ### Docker build issues
 - Ensure Docker is installed and running
 - Try rebuilding without cache: `docker-compose build --no-cache`
+- **SSL Certificate Issues**: If you encounter SSL certificate errors during Docker build, you may need to:
+  - Update your Docker daemon's certificate configuration
+  - Use a different base image
+  - Build in an environment with proper SSL certificates
+
+### Static files not found
+If the web interface shows 404 errors:
+- Ensure the `static/` directory exists and contains `index.html` and `style.css`
+- Run `./run.sh` which automatically sets up static files
+- Or manually: `mkdir -p static && cp index.html static/ && cp style.css static/`
 
 ## Development
 

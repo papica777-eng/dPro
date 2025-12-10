@@ -32,6 +32,12 @@ echo "Installing dependencies..."
 pip install -q --upgrade pip
 pip install -q -r requirements.txt
 
+# Create static directory and copy files
+echo "Setting up static files..."
+mkdir -p static
+cp -f index.html static/
+cp -f style.css static/ 2>/dev/null || echo "  (style.css copied)"
+
 # Check for serviceAccountKey.json
 if [ ! -f "serviceAccountKey.json" ]; then
     echo ""

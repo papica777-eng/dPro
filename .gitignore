@@ -20,12 +20,16 @@ wheels/
 .installed.cfg
 *.egg
 venv/
+test_venv/
 ENV/
 env/
 
 # Flask
 instance/
 .webassets-cache
+
+# Static (generated)
+static/
 
 # Environment
 .env
