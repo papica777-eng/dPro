@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: dpro-flask
+    runtime: docker
+    dockerfilePath: Dockerfile
+    branch: main
+    plan: starter
+    buildCommand: ''
+    startCommand: 'gunicorn --bind 0.0.0.0:5000 app:app'
+    envVars:
+      - key: USE_FIREBASE
+        value: "true"
+      # For security, set GOOGLE_CREDENTIALS_BASE64 in Render's environment variable UI as a secret, not in this file.

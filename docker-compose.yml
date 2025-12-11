@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+  dpro-flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - USE_FIREBASE=true
+      - PORT=5000
+      # Either mount serviceAccountKey.json or set GOOGLE_CREDENTIALS_BASE64 in your environment
+    volumes:
+      # Uncomment and update the host path if you want to mount your service account key
+      # - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+      - ./index.html:/app/index.html:ro
+      - ./style.css:/app/style.css:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  dwashesp-main:
+    build:
+      context: DP/dwashesp-main
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    environment:
+      - USE_FIREBASE=true
+      - PORT=5000
+    volumes:
+      # Mount this service's index (trust DP/dwashesp-main/index.html) into the container
+      - ./DP/dwashesp-main/index.html:/app/index.html:ro
+      # To use Firebase service account for this sub-app, mount a file:
+      # - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

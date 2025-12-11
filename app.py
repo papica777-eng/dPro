@@ -1,35 +1,88 @@
 import os
 import json
 import time
+import logging
+import uuid
+import base64
 from datetime import datetime
+from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import firebase_admin
-from firebase_admin import credentials, firestore
-
-app = Flask(__name__)
-CORS(app) # Enable CORS for all routes, allowing frontend (index.html) to connect
-
-# --- Firebase Initialization ---
-# Path to your service account key.json
-SERVICE_ACCOUNT_KEY_PATH = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
-
-if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
-    print(f"ERROR: serviceAccountKey.json not found at {SERVICE_ACCOUNT_KEY_PATH}")
-    print("Please download your Firebase service account key and place it in the 'backend' directory.")
-    print("You can get it from Firebase Console -> Project settings -> Service accounts -> Generate new private key.")
-    # Exit if key is missing, as Firebase init will fail anyway.
-    # In a production setup, you might use environment variables.
-    exit(1)
 
 try:
-    cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("Firebase initialized successfully!")
-except Exception as e:
-    print(f"ERROR: Failed to initialize Firebase: {e}")
-    exit(1)
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+except Exception:
+    firebase_admin = None
+    credentials = None
+    firestore = None
+
+app = Flask(__name__)
+
+# --- Configuration ---
+class Config:
+    USE_FIREBASE = os.environ.get('USE_FIREBASE', 'false').lower() == 'true'
+    ALLOWED_ORIGINS = [o for o in os.environ.get('ALLOWED_ORIGINS', '*').split(',') if o]
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+
+app.config.from_object(Config)
+
+if app.config['ALLOWED_ORIGINS']:
+    CORS(app, resources={r"/api/*": {"origins": app.config['ALLOWED_ORIGINS']}})
+else:
+    CORS(app)
+
+# --- Logging ---
+logging.basicConfig(level=Config.LOG_LEVEL, format='%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s')
+logger = logging.getLogger('dpro')
+
+class AddRequestIdFilter(logging.Filter):
+    def filter(self, record):
+        if not hasattr(record, 'request_id'):
+            record.request_id = '-'
+        return True
+
+for h in logging.root.handlers:
+    h.addFilter(AddRequestIdFilter())
+
+def _request_id_from_headers():
+    return request.headers.get('X-Request-Id') or str(uuid.uuid4())
+
+@app.before_request
+def _attach_request_id():
+    request.request_id = _request_id_from_headers()
+
+
+@app.after_request
+def _add_request_id_header(response):
+    request_id_val = getattr(request, 'request_id', None)
+    if request_id_val:
+        response.headers['X-Request-Id'] = request_id_val
+    return response
+
+# --- Firebase Initialization ---
+db = None
+if Config.USE_FIREBASE:
+    SERVICE_ACCOUNT_KEY_PATH = os.path.join(os.path.dirname(__file__), 'serviceAccountKey.json')
+    gcb64 = os.environ.get('GOOGLE_CREDENTIALS_BASE64')
+    try:
+        if gcb64:
+            cred_bytes = base64.b64decode(gcb64)
+            with open(SERVICE_ACCOUNT_KEY_PATH, 'wb') as f:
+                f.write(cred_bytes)
+            logger.info('Decoded GOOGLE_CREDENTIALS_BASE64 into %s', SERVICE_ACCOUNT_KEY_PATH)
+        if not os.path.exists(SERVICE_ACCOUNT_KEY_PATH):
+            logger.error('serviceAccountKey.json not found at %s', SERVICE_ACCOUNT_KEY_PATH)
+            raise FileNotFoundError(SERVICE_ACCOUNT_KEY_PATH)
+        cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        logger.info('Firebase initialized')
+    except Exception as e:
+        logger.exception('Failed to initialize Firebase')
+        raise
+else:
+    logger.info('Running in LOCAL mode (Firestore disabled)')
 
 # --- API Endpoints ---
 
@@ -39,19 +92,24 @@ def create_project():
     Receives project details from the frontend and saves them to Firestore.
     Simulates running QA checks and generates a report.
     """
-    data = request.json
+    data = request.get_json(silent=True)
     if not data:
-        return jsonify({"error": "No data provided"}), 400
+        return jsonify({"success": False, "error": "No JSON body provided"}), 400
 
-    project_name = data.get('project_name')
-    target_url = data.get('target_url')
+    project_name = (data.get('project_name') or '').strip()
+    target_url = (data.get('target_url') or '').strip()
     selected_goals = data.get('selected_goals', {})
 
-    if not project_name or not target_url:
-        return jsonify({"error": "Project Name and Target URL are required"}), 400
+    if not project_name:
+        return jsonify({"success": False, "error": "Project Name is required"}), 400
+    if not target_url:
+        return jsonify({"success": False, "error": "Target URL is required"}), 400
+    parsed = urlparse(target_url)
+    if not parsed.scheme or not parsed.netloc:
+        return jsonify({"success": False, "error": "Invalid Target URL"}), 400
 
-    print(f"Received new project: {project_name} for {target_url}")
-    print(f"Selected Goals: {selected_goals}")
+    logger.info('Received new project: %s for %s', project_name, target_url)
+    logger.debug('Selected Goals: %s', selected_goals)
 
     # --- SIMULATE ACTUAL QA LOGIC HERE ---
     # This is where you would integrate your Python Selenium WebDriver scripts,
@@ -104,17 +162,17 @@ def create_project():
         # We need the document_reference to get the ID
         doc_ref = db.collection('projects').add(project_data)
         project_id = doc_ref[1].id
-        print(f"Project '{project_name}' saved to Firestore with ID: {project_id}")
+        logger.info("Project '%s' saved to Firestore with ID: %s", project_name, project_id)
         
         # Return the saved project data including the ID and the full report
         project_data['id'] = project_id
         # Convert datetime object to string for JSON serialization
         project_data['timestamp'] = project_data['timestamp'].isoformat()
         
-        return jsonify({"message": "Project created and QA simulated successfully", "project_id": project_id, "report": project_data}), 201
+        return jsonify({"success": True, "message": "Project created and QA simulated successfully", "project_id": project_id, "report": project_data}), 201
     except Exception as e:
-        print(f"Error saving project to Firestore: {e}")
-        return jsonify({"error": f"Failed to save project to Firestore: {e}"}), 500
+        logger.exception('Error saving project: %s', e)
+        return jsonify({"success": False, "error": "Failed to save project"}), 500
 
 @app.route('/api/projects', methods=['GET'])
 def get_projects():
@@ -133,10 +191,37 @@ def get_projects():
             if 'timestamp' in project_data and hasattr(project_data['timestamp'], 'isoformat'):
                 project_data['timestamp'] = project_data['timestamp'].isoformat()
             projects.append(project_data)
-        return jsonify(projects), 200
+        return jsonify({"success": True, "projects": projects}), 200
     except Exception as e:
-        print(f"Error retrieving projects from Firestore: {e}")
-        return jsonify({"error": f"Failed to retrieve projects: {e}"}), 500
+        logger.exception('Error retrieving projects: %s', e)
+        return jsonify({"success": False, "error": "Failed to retrieve projects"}), 500
+        
+@app.route('/health', methods=['GET'])
+def health():
+    try:
+        # Check Firestore availability briefly if enabled
+        if db:
+            _ = db.collection('system_checks').document('health_check').get()
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        logger.exception('Health check failed: %s', e)
+        return jsonify({"status": "error", "message": "dependency check failed"}), 500
+
+
+@app.route('/api/ping', methods=['GET'])
+def ping():
+    """Basic service information for monitoring"""
+    return jsonify({
+        "success": True,
+        "timestamp": datetime.utcnow().isoformat() + 'Z',
+        "message": "dPro Flask API",
+    }), 200
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.exception('Unhandled exception: %s', e)
+    return jsonify({"success": False, "error": "Internal server error"}), 500
 
 if __name__ == '__main__':
     # When running locally without Docker for testing:
@@ -144,5 +229,6 @@ if __name__ == '__main__':
     # When running with Gunicorn via Docker, the CMD in Dockerfile takes over.
     # This block will typically not run inside the Docker container when Gunicorn is used.
     # It's here for direct local execution without Docker.
-    print("Running Flask app directly for local development (not via Gunicorn/Docker).")
-    app.run(debug=True, port=5000)
+        logger.info("Running Flask app directly for local development (not via Gunicorn/Docker).")
+        PORT = int(os.environ.get('PORT', '5000'))
+        app.run(debug=True, port=PORT, host='0.0.0.0')

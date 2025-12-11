@@ -1,0 +1,7 @@
+serviceAccountKey.json
+projects_data.json
+*.pyc
+__pycache__/
+.git
+node_modules
+dist

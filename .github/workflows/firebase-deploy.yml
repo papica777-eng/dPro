@@ -1,0 +1,65 @@
+name: Deploy Firebase Functions & Hosting
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'dpengeneering-main/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install functions deps
+        run: |
+          cd dpengeneering-main/functions
+          npm ci
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure Firebase credentials (service account or token)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "$FIREBASE_SERVICE_ACCOUNT" | base64 --decode > $GITHUB_WORKSPACE/firebase-sa.json
+            echo "Firebase service account written to $GITHUB_WORKSPACE/firebase-sa.json"
+          fi
+
+      - name: Install global Firebase tools
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$FIREBASE_TOKEN" ]; then
+            firebase deploy --only functions,hosting --project $FIREBASE_PROJECT_ID --token "$FIREBASE_TOKEN"
+          elif [ -f "$GITHUB_WORKSPACE/firebase-sa.json" ]; then
+            # Put the service account in the environment so firebase-tools use it
+            export GOOGLE_APPLICATION_CREDENTIALS=$GITHUB_WORKSPACE/firebase-sa.json
+            firebase deploy --only functions,hosting --project $FIREBASE_PROJECT_ID
+          else
+            echo "No valid Firebase credentials configured. Set FIREBASE_TOKEN or FIREBASE_SERVICE_ACCOUNT secret."; exit 1
+          fi

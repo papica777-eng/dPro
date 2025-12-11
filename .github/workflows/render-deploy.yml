@@ -1,0 +1,149 @@
+name: Deploy Flask image to Render
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Dockerfile'
+      - 'app.py'
+      - 'index.html'
+      - 'style.css'
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image to GHCR
+        id: build_and_push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/dpro-flask:latest,ghcr.io/${{ github.repository_owner }}/dpro-flask:${{ github.sha }}
+        # If you need to set a step output for the image tag later, you can write it to $GITHUB_OUTPUT
+        # e.g. echo "image_tag=ghcr.io/${{ github.repository_owner }}/dpro-flask:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          set -e
+          if [ -z "$RENDER_API_KEY" ]; then
+            echo "RENDER_API_KEY not set. Configure it in GitHub repo secrets."; exit 1
+          fi
+          if [ -z "$RENDER_SERVICE_ID" ]; then
+            echo "RENDER_SERVICE_ID not set. Configure it in GitHub repo secrets."; exit 1
+          fi
+          echo "Requesting Render to start a new deploy for service $RENDER_SERVICE_ID..."
+          deploy_resp=$(curl -s -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"type":"manual"}')
+          echo "Deploy response: $deploy_resp"
+          deploy_id=$(echo "$deploy_resp" | jq -r '.id')
+          if [ -z "$deploy_id" ] || [ "$deploy_id" = "null" ]; then
+            echo "Failed to initiate deploy (deploy id missing)"; echo "$deploy_resp"; exit 1
+          fi
+          echo "Deploy initiated. Deploy id: $deploy_id"
+          echo "Render deploy request submitted. You can monitor the deployment on Render dashboard."
+
+      - name: Wait for Render deploy to complete and check health
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          echo "Retrieving service metadata from Render..."
+          # Get domain, deploy status and build link
+          resp=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID")
+          DOMAIN=$(echo "$resp" | jq -r '.defaultDomain // (.name + ".onrender.com")')
+          echo "Service domain: $DOMAIN"
+          deploy_url="https://dashboard.render.com/services/$RENDER_SERVICE_ID/deploys/$deploy_id"
+          echo "Render deploy URL: $deploy_url"
+          echo "Service domain: $DOMAIN"
+
+          # Poll /health until healthy or timeout
+          # Exponential backoff poll for deploy status and health
+          attempts=0
+          max_attempts=8
+          wait_seconds=10
+          health_status="UNHEALTHY"
+          deploy_status="unknown"
+          while [ $attempts -lt $max_attempts ]; do
+            # get deploy info
+            deploy_info=$(curl -s -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")
+            deploy_status=$(echo "$deploy_info" | jq -r '.status')
+            echo "Deploy status: $deploy_status"
+            if [ "$deploy_status" = "succeeded" ]; then
+              echo "Deploy succeeded"
+              # try to check the /health endpoint
+              if curl -fsS "https://$DOMAIN/health" >/dev/null 2>&1; then
+                health_status="OK"
+                break
+              fi
+            fi
+            if [ "$deploy_status" = "failed" ]; then
+              echo "Deploy failed"; break
+            fi
+            attempts=$((attempts+1))
+            echo "Sleeping $wait_seconds seconds before next check (attempt $attempts/$max_attempts)"
+            sleep $wait_seconds
+            wait_seconds=$((wait_seconds*2))
+          done
+          if [ $attempts -ge $max_attempts ] && [ "$deploy_status" != "succeeded" ]; then
+            echo "Timed out waiting for deploy to succeed"
+          fi
+          if [ $attempts -ge $max_attempts ]; then
+            echo "Health check NOT OK after timeout"
+            health_status="UNHEALTHY"
+          fi
+
+          # Check /api/ping
+          if curl -fsS "https://$DOMAIN/api/ping" >/dev/null 2>&1; then
+            ping_status="OK"
+          else
+            ping_status="FAILED"
+          fi
+
+          # Post results as a commit comment
+          owner=${{ github.repository_owner }}
+          repo=$(basename $GITHUB_REPOSITORY)
+          sha=${{ github.sha }}
+          comment_body=$(jq -n --arg domain "$DOMAIN" --arg health "$health_status" --arg ping "$ping_status" --arg deploy_url "$deploy_url" --arg status "$deploy_status" '{body: ("Render deploy finished for " + $domain + "\nDeploy status: " + $status + "\nHealth: " + $health + "\nPing: " + $ping + "\nDeploy logs: " + $deploy_url)}')
+          echo "Posting commit comment with health summary..."
+          curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$comment_body" "https://api.github.com/repos/$owner/$repo/commits/$sha/comments"
+
+          # If this commit is associated with PR(s), post a PR comment as well
+          pr_list=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.groot-preview+json" "https://api.github.com/repos/$owner/$repo/commits/$sha/pulls")
+          pr_number=$(echo "$pr_list" | jq -r '.[0].number // empty')
+          if [ -n "$pr_number" ]; then
+            echo "Posting comment to PR #$pr_number"
+            curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$comment_body" "https://api.github.com/repos/$owner/$repo/issues/$pr_number/comments"
+          fi

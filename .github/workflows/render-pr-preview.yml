@@ -1,0 +1,176 @@
+name: Render PR Preview Deploy
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+jobs:
+  deploy_preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Build and push PR image
+        if: ${{ github.event.action != 'closed' }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/dpro-flask:pr-${{ github.event.number }}
+
+      - name: Create or update Render PR service
+        if: ${{ github.event.action != 'closed' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_PLAN: ${{ secrets.RENDER_PLAN || 'starter' }}
+          RENDER_REGION: ${{ secrets.RENDER_REGION || 'oregon' }}
+          PR_ID: ${{ github.event.number }}
+          PR_BRANCH: ${{ github.head_ref }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          # Build a unique service name for this PR
+          SERVICE_NAME="dpro-pr-${PR_ID}"
+          IMAGE="ghcr.io/${OWNER}/dpro-flask:pr-${PR_ID}"
+
+          # Check if a service with this name already exists
+          response=$(curl -s -X GET "https://api.render.com/v1/services" -H "Authorization: Bearer $RENDER_API_KEY")
+          existing=$(echo "$response" | jq -r ".[] | select(.name==\"${SERVICE_NAME}\") | .id")
+
+          if [ -n "$existing" ]; then
+            echo "Service $SERVICE_NAME exists as $existing, creating a deploy using the existing service"
+            curl -s -X POST "https://api.render.com/v1/services/$existing/deploys" -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" -d '{"image":"'"$IMAGE"'"}'
+            SERVICE_ID=$existing
+          else
+            echo "Service $SERVICE_NAME does not exist; creating a new Render service referencing GHCR image"
+            create_body=$(jq -n --arg name "$SERVICE_NAME" --arg img "$IMAGE" --arg plan "$RENDER_PLAN" --arg region "$RENDER_REGION" '{service: {name: $name, type: "web_service", dockerImage: $img, plan: $plan, region: $region, envVars: [{key: "USE_FIREBASE", value: "true", scope: "RUN"}], startCommand: "gunicorn --bind 0.0.0.0:5000 app:app"}}')
+            echo "$create_body" | jq .
+            newServiceResp=$(curl -s -X POST "https://api.render.com/v1/services" -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" -d "$create_body")
+            SERVICE_ID=$(echo "$newServiceResp" | jq -r '.id')
+            echo "Created new service $SERVICE_NAME with id $SERVICE_ID"
+          fi
+
+          # Wait for the service's URL and a healthy deploy
+          PREVIEW_URL="https://${SERVICE_NAME}.onrender.com"
+          echo "Preview URL expected: $PREVIEW_URL"
+          attempts=0
+          until [ $attempts -ge 12 ]
+          do
+            if curl -fsS "$PREVIEW_URL/health" >/dev/null 2>&1; then
+              echo "Preview health ok"
+              break
+            fi
+            attempts=$((attempts+1))
+            echo "Waiting for preview to become healthy (attempt $attempts)..."
+            sleep 10
+          done
+          if [ $attempts -ge 12 ]; then
+            echo "Preview service not healthy after timeout"
+          fi
+
+          # Run a basic ping, GET, and POST integration tests and record results
+          PING_OK=false
+          PROJECTS_OK=false
+          POST_OK=false
+          POST_ID=""
+          if curl -fsS "$PREVIEW_URL/api/ping" >/dev/null 2>&1; then
+            PING_OK=true
+          fi
+
+          # GET /projects
+          projects_resp=$(curl -sS "$PREVIEW_URL/api/projects" || true)
+          if [ -n "$projects_resp" ]; then
+            # check for success or array
+            echo "$projects_resp" | jq -e '(.success == true) or (type == "array")' >/dev/null 2>&1 && PROJECTS_OK=true || PROJECTS_OK=false
+          fi
+
+          # POST /project - create a test project
+          payload=$(jq -n --arg name "PR-${PR_ID}-smoke-$(date +%s)" --arg url "https://example.com" '{project_name: $name, target_url: $url, selected_goals: {"Performance Metrics & Load Times": true}}')
+          post_resp=$(curl -sS -X POST -H "Content-Type: application/json" -d "$payload" "$PREVIEW_URL/api/project" || true)
+          if [ -n "$post_resp" ]; then
+            post_ok_val=$(echo "$post_resp" | jq -r '.success // empty')
+            if [ "$post_ok_val" = "true" ]; then
+              POST_OK=true
+              POST_ID=$(echo "$post_resp" | jq -r '.project_id // empty')
+            else
+              POST_OK=false
+            fi
+          fi
+
+          # Post a comment to PR with preview URL and results using jq for safe JSON
+          health_status=$( [ $attempts -lt 12 ] && echo 'OK' || echo 'UNHEALTHY' )
+          ping_status=$( [ "$PING_OK" = true ] && echo 'OK' || echo 'FAILED' )
+          getprojects_status=$( [ "$PROJECTS_OK" = true ] && echo 'OK' || echo 'FAILED' )
+          post_status=$( [ "$POST_OK" = true ] && echo "OK (ID: $POST_ID)" || echo 'FAILED' )
+          deploy_status_val=${deploy_status:-unknown}
+          comment_body=$(jq -n --arg pr "${PR_ID}" --arg url "$PREVIEW_URL" --arg deploy_status "$deploy_status_val" --arg health "$health_status" --arg ping "$ping_status" --arg getprojects "$getprojects_status" --arg post "$post_status" --arg deploy_url "$deploy_url" '{body: ("Preview service for PR #" + $pr + ": " + $url + "\n\nDeploy status: " + $deploy_status + "\nHealth: " + $health + "\nPing: " + $ping + "\nGET /projects: " + $getprojects + "\nPOST /project: " + $post + "\nDeploy logs: " + $deploy_url)}')
+          echo "Posting comment to PR..."
+          curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" -d "$comment_body" "https://api.github.com/repos/${OWNER}/${REPO}/issues/${PR_ID}/comments"
+
+      - name: Delete Render PR service when PR is closed
+        if: ${{ github.event.action == 'closed' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          PR_ID: ${{ github.event.number }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          SERVICE_NAME="dpro-pr-${PR_ID}"
+          response=$(curl -s -X GET "https://api.render.com/v1/services" -H "Authorization: Bearer $RENDER_API_KEY")
+          id=$(echo "$response" | jq -r ".[] | select(.name==\"${SERVICE_NAME}\") | .id")
+          if [ -n "$id" ]; then
+            echo "Deleting service $SERVICE_NAME with id $id"
+            curl -s -X DELETE "https://api.render.com/v1/services/${id}" -H "Authorization: Bearer $RENDER_API_KEY"
+            # Post a comment that the preview was deleted
+              curl -s -H "Authorization: Bearer $GITHUB_TOKEN" -H "Content-Type: application/json" -d "{\"body\": \"Preview service for PR #${PR_ID} deleted.\"}" "https://api.github.com/repos/${OWNER}/${REPO}/issues/${PR_ID}/comments"
+          else
+            echo "Service $SERVICE_NAME not found; nothing to delete"
+          fi
+
+          # Try to delete the GHCR image tag created for the PR preview
+          if [ -n "$GHCR_PAT" ]; then
+            echo "Attempting to delete GHCR container image tag for PR ${PR_ID}"
+            PACKAGE=dpro-flask
+            TAG=pr-${PR_ID}
+
+            # Try user packages endpoint (personal user)
+            versions=$(curl -s -H "Authorization: Bearer $GHCR_PAT" "https://api.github.com/user/packages/container/$PACKAGE/versions")
+            if [ -n "$versions" ]; then
+              # find matching version id(s)
+              ids=$(echo "$versions" | jq -r ".[] | select(.metadata.container.tags[]? | contains(\"$TAG\")) | .id")
+              for vid in $ids; do
+                echo "Deleting package version $vid (tag $TAG) via user endpoint"
+                curl -s -X DELETE -H "Authorization: Bearer $GHCR_PAT" "https://api.github.com/user/packages/container/$PACKAGE/versions/$vid"
+              done
+            fi
+
+            # Try org packages endpoint (organization owner)
+            versions_org=$(curl -s -H "Authorization: Bearer $GHCR_PAT" "https://api.github.com/orgs/$OWNER/packages/container/$PACKAGE/versions")
+            if [ -n "$versions_org" ]; then
+              ids_org=$(echo "$versions_org" | jq -r ".[] | select(.metadata.container.tags[]? | contains(\"$TAG\")) | .id")
+              for vid in $ids_org; do
+                echo "Deleting package version $vid (tag $TAG) via org endpoint"
+                curl -s -X DELETE -H "Authorization: Bearer $GHCR_PAT" "https://api.github.com/orgs/$OWNER/packages/container/$PACKAGE/versions/$vid"
+              done
+            fi
+          else
+            echo "GHCR_PAT not present; skipping GHCR image cleanup. Set GHCR_PAT secret with 'delete:packages' scope to enable cleanup."
+          fi
